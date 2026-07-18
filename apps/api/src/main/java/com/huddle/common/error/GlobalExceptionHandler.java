@@ -20,8 +20,8 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
- * Translates exceptions into a consistent {@link ApiError} JSON body. No handler leaks a stack
- * trace: unexpected errors are logged server-side and reported generically.
+ * Translates exceptions into a consistent {@link ApiError} JSON body. Unexpected errors are logged
+ * server-side and reported generically.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
