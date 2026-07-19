@@ -53,8 +53,7 @@ class ClubControllerIT {
                 .andExpect(jsonPath("$.content[2].name").value("No Score Club"))
                 // Blurb from description, truncated on a word boundary with a trailing ellipsis.
                 .andExpect(jsonPath("$.content[0].blurb").value(endsWith("…")))
-                // Interests batch-fetched, ordered by
-                // name, capped at 3.
+                // Interests batch-fetched, ordered by name, capped at 3.
                 .andExpect(jsonPath("$.content[0].interests.length()").value(3))
                 .andExpect(jsonPath("$.content[0].interests[*].slug")
                         .value(contains("arts", "games", "music")))
