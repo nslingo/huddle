@@ -1,0 +1,10 @@
+{
+  "name": "huddle",
+  "private": true,
+  "packageManager": "pnpm@11.15.0",
+  "scripts": {
+    "app:android": "pnpm --filter @huddle/app android",
+    "app:ios": "pnpm --filter @huddle/app ios",
+    "app:start": "pnpm --filter @huddle/app start"
+  }
+}

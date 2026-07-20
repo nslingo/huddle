@@ -1,0 +1,18 @@
+packages:
+  - "apps/*"
+
+# Required on Windows: pnpm's isolated layout puts every package under
+# .pnpm/<name>@<version>_<peer-hash>/node_modules/<name>/, adding ~100 chars to
+# each path. Android's CMake/ninja native build then blows MAX_PATH (260) and
+# fails with "object file cannot be safely placed under this directory".
+# Hoisting flattens to node_modules/<name>/, which is also what React Native
+# tooling expects. pnpm 11 only reads this from here, never from .npmrc.
+nodeLinker: hoisted
+# These three ship prebuilt binaries as per-platform optional dependencies
+# (@esbuild/win32-x64, @parcel/watcher-win32-x64, @unrs/resolver-binding-*),
+# all verified present. Their postinstall scripts are only a verify/fallback
+# download step, so they stay blocked.
+allowBuilds:
+  '@parcel/watcher': false
+  esbuild: false
+  unrs-resolver: false
