@@ -1,5 +1,8 @@
 # Environment / secrets
 .env
+# ...but the Expo app's .env holds committed non-secret defaults (EXPO_PUBLIC_*)
+# that env.ts validates at build time, so keep it tracked.
+!apps/app/.env
 
 ### Maven / Java build ###
 HELP.md
@@ -35,3 +38,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Node / pnpm / Expo ###
+node_modules/
+.pnpm-debug.log*
+.expo/
