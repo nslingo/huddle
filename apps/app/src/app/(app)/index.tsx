@@ -1,1 +1,1 @@
-export { FeedScreen as default } from '@/features/feed/feed-screen';
+export { ClubsScreen as default } from '@/features/clubs/clubs-screen';
