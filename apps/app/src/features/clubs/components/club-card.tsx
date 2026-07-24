@@ -3,7 +3,8 @@ import type { ClubSummary } from '../api';
 import { Link } from 'expo-router';
 import * as React from 'react';
 
-import { Image, Pressable, Text, View } from '@/components/ui';
+import { Pressable, Text, View } from '@/components/ui';
+import { ClubLogo } from './club-logo';
 
 type Props = ClubSummary;
 
@@ -49,29 +50,5 @@ export function ClubCard({ publicId, name, logoUrl, blurb, interests }: Props) {
         </View>
       </Pressable>
     </Link>
-  );
-}
-
-/** Logo, or the club's first character when `logo_url` is null. */
-function ClubLogo({ name, logoUrl }: Pick<ClubSummary, 'name' | 'logoUrl'>) {
-  if (logoUrl) {
-    return (
-      <Image
-        className="size-12 rounded-lg"
-        contentFit="cover"
-        source={{ uri: logoUrl }}
-      />
-    );
-  }
-
-  // Index by code point so an emoji or supplementary character isn't split.
-  const initial = [...name][0] ?? '?';
-
-  return (
-    <View className="size-12 items-center justify-center rounded-lg bg-neutral-200 dark:bg-neutral-800">
-      <Text className="text-lg font-semibold text-neutral-600 dark:text-neutral-300">
-        {initial}
-      </Text>
-    </View>
   );
 }
