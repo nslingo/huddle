@@ -1,6 +1,7 @@
 package com.huddle.club;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
@@ -8,10 +9,16 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.huddle.club.dto.ClubDetailResponse;
+import com.huddle.club.dto.ClubLinkRef;
 import com.huddle.club.dto.ClubSummaryResponse;
+import com.huddle.club.dto.ContactRef;
 import com.huddle.common.PageResponse;
+import com.huddle.common.error.ResourceNotFoundException;
 import com.huddle.interest.dto.InterestRef;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +36,9 @@ class ClubServiceTest {
 
     @Mock
     private ClubRepository clubRepository;
+
+    @Mock
+    private ClubLinkRepository clubLinkRepository;
 
     @InjectMocks
     private ClubService clubService;
@@ -134,6 +144,152 @@ class ClubServiceTest {
 
         assertThat(feed.content()).isEmpty();
         verify(clubRepository, never()).findInterestRowsForClubs(anyCollection());
+    }
+
+    @Test
+    void getClub_mapsEveryDetailField_withUncappedInterests() {
+        UUID publicId = UUID.randomUUID();
+        Club club = club(1L, publicId, "Chess Club", "logo.png", "We play chess.", "Grow chess");
+        club.setSlug("chess-club");
+        club.setStatus(ClubStatus.active);
+        club.setGoals("Win the Ivy tournament");
+        club.setClubType("Games");
+        club.setMembershipType("Open");
+        club.setInstagramHandle("cornellchess");
+        club.setFollowerCount(1200);
+        club.setActivityScore(90f);
+        club.setContacts(List.of(new ClubContact("email", "chess@cornell.edu")));
+        when(clubRepository.findByPublicId(publicId)).thenReturn(Optional.of(club));
+        when(clubRepository.findInterestRowsForClubs(anyCollection())).thenReturn(List.of(
+                row(1L, "arts", "Arts"),
+                row(1L, "games", "Games"),
+                row(1L, "music", "Music"),
+                row(1L, "service", "Service"),
+                row(1L, "tech", "Technology")));
+        when(clubLinkRepository.findByClubId(1L)).thenReturn(List.of(link(ClubLinkType.website, "https://chess.cornell.edu")));
+
+        ClubDetailResponse detail = clubService.getClub(publicId);
+
+        assertThat(detail.publicId()).isEqualTo(publicId);
+        assertThat(detail.slug()).isEqualTo("chess-club");
+        assertThat(detail.name()).isEqualTo("Chess Club");
+        assertThat(detail.status()).isEqualTo(ClubStatus.active);
+        assertThat(detail.logoUrl()).isEqualTo("logo.png");
+        assertThat(detail.description()).isEqualTo("We play chess.");
+        assertThat(detail.mission()).isEqualTo("Grow chess");
+        assertThat(detail.goals()).isEqualTo("Win the Ivy tournament");
+        assertThat(detail.clubType()).isEqualTo("Games");
+        assertThat(detail.membershipType()).isEqualTo("Open");
+        assertThat(detail.instagramHandle()).isEqualTo("cornellchess");
+        assertThat(detail.followerCount()).isEqualTo(1200);
+        assertThat(detail.activityScore()).isEqualTo(90f);
+        // All 5 kept — the 3-interest cap is the feed's, not the detail page's.
+        assertThat(detail.interests()).extracting(InterestRef::slug)
+                .containsExactly("arts", "games", "music", "service", "tech");
+        assertThat(detail.contacts())
+                .containsExactly(new ContactRef("email", "chess@cornell.edu"));
+    }
+
+    @Test
+    void getClub_derivesInstagramLinkFromHandle_replacingStoredUrl() {
+        UUID publicId = UUID.randomUUID();
+        Club club = detailClub(publicId);
+        club.setInstagramHandle("cornellchess");
+        stubDetail(club, List.of(
+                link(ClubLinkType.website, "https://chess.cornell.edu"),
+                link(ClubLinkType.instagram, "https://www.instagram.com/CornellChess/?igshid=abc")));
+
+        List<ClubLinkRef> links = clubService.getClub(publicId).links();
+
+        // Handle wins over the raw scraped URL, and EnumMap order puts instagram before website.
+        assertThat(links).containsExactly(
+                new ClubLinkRef(ClubLinkType.instagram, "https://www.instagram.com/cornellchess"),
+                new ClubLinkRef(ClubLinkType.website, "https://chess.cornell.edu"));
+    }
+
+    @Test
+    void getClub_withoutHandle_keepsStoredInstagramLink() {
+        UUID publicId = UUID.randomUUID();
+        Club club = detailClub(publicId);
+        club.setInstagramHandle(null);
+        stubDetail(club, List.of(link(ClubLinkType.instagram, "https://www.instagram.com/artsociety/")));
+
+        assertThat(clubService.getClub(publicId).links()).containsExactly(
+                new ClubLinkRef(ClubLinkType.instagram, "https://www.instagram.com/artsociety/"));
+    }
+
+    @Test
+    void getClub_nullContactsAndNoLinks_returnEmptyListsNotNull() {
+        UUID publicId = UUID.randomUUID();
+        Club club = detailClub(publicId);
+        club.setContacts(null);
+        stubDetail(club, List.of());
+
+        ClubDetailResponse detail = clubService.getClub(publicId);
+
+        assertThat(detail.contacts()).isEmpty();
+        assertThat(detail.links()).isEmpty();
+        assertThat(detail.interests()).isEmpty();
+    }
+
+    @Test
+    void getClub_dropsContactsWithNoValue() {
+        UUID publicId = UUID.randomUUID();
+        Club club = detailClub(publicId);
+        club.setContacts(Arrays.asList(
+                new ClubContact("email", "chess@cornell.edu"),
+                new ClubContact("phone", "   "),
+                new ClubContact("phone", null),
+                null));
+        stubDetail(club, List.of());
+
+        assertThat(clubService.getClub(publicId).contacts())
+                .containsExactly(new ContactRef("email", "chess@cornell.edu"));
+    }
+
+    @Test
+    void getClub_unknownPublicId_throwsResourceNotFound() {
+        UUID publicId = UUID.randomUUID();
+        when(clubRepository.findByPublicId(publicId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> clubService.getClub(publicId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining(publicId.toString());
+
+        verify(clubRepository, never()).findInterestRowsForClubs(anyCollection());
+    }
+
+    /** Detail ignores status — an inactive club stays reachable by a link a user already has. */
+    @Test
+    void getClub_returnsInactiveClub() {
+        UUID publicId = UUID.randomUUID();
+        Club club = detailClub(publicId);
+        club.setStatus(ClubStatus.inactive);
+        stubDetail(club, List.of());
+
+        assertThat(clubService.getClub(publicId).status()).isEqualTo(ClubStatus.inactive);
+    }
+
+    /** A minimal club for the link/contact tests, which don't care about the descriptive fields. */
+    private static Club detailClub(UUID publicId) {
+        Club club = club(1L, publicId, "Chess Club", null, "We play chess.", null);
+        club.setSlug("chess-club");
+        club.setStatus(ClubStatus.active);
+        return club;
+    }
+
+    /** Stubs the three reads behind {@code getClub} for a club with no interests. */
+    private void stubDetail(Club club, List<ClubLink> links) {
+        when(clubRepository.findByPublicId(club.getPublicId())).thenReturn(Optional.of(club));
+        when(clubRepository.findInterestRowsForClubs(anyCollection())).thenReturn(List.of());
+        when(clubLinkRepository.findByClubId(club.getId())).thenReturn(links);
+    }
+
+    private static ClubLink link(ClubLinkType type, String url) {
+        ClubLink link = new ClubLink();
+        link.setType(type);
+        link.setUrl(url);
+        return link;
     }
 
     /** Stubs a one-club feed page with no interests, for tests that only care about the club itself. */

@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import lombok.Getter;
@@ -29,9 +30,9 @@ import org.hibernate.type.SqlTypes;
  *       trigger) and mapped read-only ({@code insertable = false, updatable = false}); no
  *       {@code @UpdateTimestamp} on {@code updatedAt} since a trigger maintains it.
  *   <li>{@code status} is a Postgres native enum, mapped via {@link SqlTypes#NAMED_ENUM}.
- *   <li>The {@code search_vector} (tsvector) and {@code contacts} (jsonb) columns are intentionally
- *       left unmapped here — full-text search uses a native query, and {@code contacts} arrives with
- *       the club detail endpoint in a later slice.
+ *   <li>{@code contacts} is jsonb, mapped via {@link SqlTypes#JSON}.
+ *   <li>The {@code search_vector} (tsvector) column is intentionally left unmapped here — full-text
+ *       search uses a native query.
  * </ul>
  */
 @Entity
@@ -83,6 +84,15 @@ public class Club {
 
     @Column(name = "logo_url")
     private String logoUrl;
+
+    /**
+     * Free-form contact entries from CampusGroups, stored as a jsonb array of
+     * {@code {"type", "value"}} objects (the DB checks that it's an array). Null when the club
+     * listed no contact info.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private List<ClubContact> contacts;
 
     /**
      * Interests linked through the {@code club_interests} join table. Lazy and read-only here: the

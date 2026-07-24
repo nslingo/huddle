@@ -2,6 +2,8 @@ package com.huddle.club;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,6 +26,9 @@ public interface ClubRepository extends JpaRepository<Club, Long> {
             """,
             countQuery = "select count(c) from Club c where c.status = :status")
     Page<Club> findFeedByStatus(@Param("status") ClubStatus status, Pageable pageable);
+
+    /** Looks up a single club by its public id, regardless of status (see {@code ClubService}). */
+    Optional<Club> findByPublicId(UUID publicId);
 
     /**
      * Batch-fetches the interests for the given clubs in a single query, ordered by club and then
