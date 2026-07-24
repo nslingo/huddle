@@ -10,8 +10,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.huddle.club.dto.ClubDetailResponse;
+import com.huddle.club.dto.ClubLinkRef;
 import com.huddle.club.dto.ClubSummaryResponse;
+import com.huddle.club.dto.ContactRef;
 import com.huddle.common.PageResponse;
+import com.huddle.common.error.ResourceNotFoundException;
 import com.huddle.config.SecurityConfig;
 import com.huddle.interest.dto.InterestRef;
 import java.util.List;
@@ -100,6 +104,44 @@ class ClubControllerWebMvcTest {
     }
 
     @Test
+    void getClub_returnsDetail() throws Exception {
+        UUID publicId = UUID.randomUUID();
+        when(clubService.getClub(publicId)).thenReturn(detail(publicId));
+
+        mockMvc.perform(get("/api/clubs/{publicId}", publicId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.publicId").value(publicId.toString()))
+                .andExpect(jsonPath("$.slug").value("chess-club"))
+                .andExpect(jsonPath("$.status").value("active"))
+                .andExpect(jsonPath("$.interests[0].slug").value("games"))
+                .andExpect(jsonPath("$.contacts[0].type").value("email"))
+                .andExpect(jsonPath("$.links[0].type").value("instagram"));
+
+        verify(clubService).getClub(publicId);
+    }
+
+    @Test
+    void getClub_unknownId_returns404() throws Exception {
+        UUID publicId = UUID.randomUUID();
+        when(clubService.getClub(publicId))
+                .thenThrow(new ResourceNotFoundException("No club with id " + publicId));
+
+        mockMvc.perform(get("/api/clubs/{publicId}", publicId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value(containsString(publicId.toString())));
+    }
+
+    @Test
+    void getClub_malformedUuid_returns400() throws Exception {
+        mockMvc.perform(get("/api/clubs/not-a-uuid"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+
+        verifyNoInteractions(clubService);
+    }
+
+    @Test
     void wrongHttpMethod_returns405WithAllowHeader() throws Exception {
         mockMvc.perform(post("/api/clubs"))
                 .andExpect(status().isMethodNotAllowed())
@@ -108,5 +150,15 @@ class ClubControllerWebMvcTest {
                 .andExpect(jsonPath("$.status").value(405));
 
         verifyNoInteractions(clubService);
+    }
+
+    private static ClubDetailResponse detail(UUID publicId) {
+        return new ClubDetailResponse(
+                publicId, "chess-club", "Chess Club", ClubStatus.active, "logo.png",
+                "We play chess.", "Grow chess", "Win the Ivy tournament",
+                "Games", "Open", "cornellchess", 1200, 90f,
+                List.of(new InterestRef("games", "Games")),
+                List.of(new ContactRef("email", "chess@cornell.edu")),
+                List.of(new ClubLinkRef(ClubLinkType.instagram, "https://www.instagram.com/cornellchess")));
     }
 }
