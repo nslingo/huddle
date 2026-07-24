@@ -1,5 +1,5 @@
 import type { AxiosError } from 'axios';
-import { createInfiniteQuery } from 'react-query-kit';
+import { createInfiniteQuery, createQuery } from 'react-query-kit';
 import { client } from '@/lib/api';
 
 // Types — mirror the API DTOs in apps/api.
@@ -21,6 +21,61 @@ export type ClubSummary = {
   logoUrl: string | null;
   blurb: string | null;
   interests: InterestRef[];
+};
+
+/** Postgres `club_status`, serialized as its lowercase label. */
+export type ClubStatus = 'active' | 'inactive';
+
+/** Postgres `club_link_type`, serialized as its lowercase label. */
+export type ClubLinkType
+  = | 'instagram'
+    | 'facebook'
+    | 'x'
+    | 'linkedin'
+    | 'youtube'
+    | 'tiktok'
+    | 'discord'
+    | 'linktree'
+    | 'website';
+
+/**
+ * `com.huddle.club.dto.ContactRef`. `type` is free-form — ingestion derives it from the
+ * CampusGroups label, so it's usually `email` or `phone` but isn't guaranteed to be.
+ */
+export type ContactRef = {
+  type: string;
+  value: string;
+};
+
+/** `com.huddle.club.dto.ClubLinkRef` */
+export type ClubLinkRef = {
+  type: ClubLinkType;
+  url: string;
+};
+
+/**
+ * `com.huddle.club.dto.ClubDetailResponse`. Every descriptive field is nullable in `V1`;
+ * `interests` / `contacts` / `links` are always present (empty, never null), and `interests`
+ * is uncapped here, unlike the feed's ≤3. No `blurb`: the detail screen renders the full
+ * `description`/`mission` instead.
+ */
+export type ClubDetail = {
+  publicId: string;
+  slug: string;
+  name: string;
+  status: ClubStatus;
+  logoUrl: string | null;
+  description: string | null;
+  mission: string | null;
+  goals: string | null;
+  clubType: string | null;
+  membershipType: string | null;
+  instagramHandle: string | null;
+  followerCount: number | null;
+  activityScore: number | null;
+  interests: InterestRef[];
+  contacts: ContactRef[];
+  links: ClubLinkRef[];
 };
 
 /** `com.huddle.common.PageResponse<T>` */
@@ -59,4 +114,19 @@ export const useClubs = createInfiniteQuery<
       .then(response => response.data),
   initialPageParam: 0,
   getNextPageParam: lastPage => (lastPage.hasNext ? lastPage.page + 1 : undefined),
+});
+
+type ClubVariables = { id: string };
+
+/**
+ * One club's full detail, by `publicId`. Keyed `['club', { id }]` — a sibling of the feed's
+ * `['clubs']`, deliberately not nested under it (see `useClubs`): React Query matches keys by
+ * prefix, so nesting would make a feed invalidation also evict every cached detail.
+ *
+ * A 404 (unknown/removed club) surfaces as an `AxiosError` for the screen to handle.
+ */
+export const useClub = createQuery<ClubDetail, ClubVariables, AxiosError>({
+  queryKey: ['club'],
+  fetcher: variables =>
+    client.get(`clubs/${variables.id}`).then(response => response.data),
 });
