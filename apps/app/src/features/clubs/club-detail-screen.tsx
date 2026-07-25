@@ -46,7 +46,7 @@ export function ClubDetailScreen() {
       <View className="flex-1 justify-center">
         <Stack.Screen options={SCREEN_OPTIONS} />
         <FocusAwareStatusBar />
-        <ActivityIndicator />
+        <ActivityIndicator testID="club-detail-loading" />
       </View>
     );
   }
@@ -61,7 +61,15 @@ export function ClubDetailScreen() {
         <Text className="pb-4 text-center">
           {notFound ? 'This club no longer exists.' : 'Couldn\'t load this club.'}
         </Text>
-        {notFound ? null : <Button label="Try again" onPress={() => refetch()} />}
+        {notFound
+          ? null
+          : (
+              <Button
+                testID="club-detail-retry"
+                label="Try again"
+                onPress={() => refetch()}
+              />
+            )}
       </View>
     );
   }
@@ -187,7 +195,7 @@ function ContactRow({ contact }: { contact: ContactRef }) {
     );
   }
   return (
-    <Pressable onPress={() => openLinkInBrowser(href)}>
+    <Pressable accessibilityRole="link" onPress={() => openLinkInBrowser(href)}>
       <Text className="text-blue-600 dark:text-blue-400">{contact.value}</Text>
     </Pressable>
   );
@@ -212,7 +220,11 @@ function Links({ links }: { links: ClubLinkRef[] }) {
     <View className="gap-2">
       <Text className="text-lg font-semibold">Links</Text>
       {links.map(link => (
-        <Pressable key={link.type} onPress={() => openLinkInBrowser(link.url)}>
+        <Pressable
+          key={link.type}
+          accessibilityRole="link"
+          onPress={() => openLinkInBrowser(link.url)}
+        >
           <Text className="text-blue-600 dark:text-blue-400">
             {LINK_LABELS[link.type]}
           </Text>
