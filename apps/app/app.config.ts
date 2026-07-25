@@ -17,8 +17,9 @@ const EAS_PROJECT_ID = 'c3e1075b-6fe7-4686-aa49-35b46a229044';
 // hoisted linker it lives in the workspace root instead. Resolving through Node
 // returns an absolute path, which path.resolve passes through unchanged, so this
 // is correct regardless of linker or workspace depth.
-const interFont = (file: string): string =>
-  require.resolve(`@expo-google-fonts/inter/${file}`);
+function interFont(file: string): string {
+  return require.resolve(`@expo-google-fonts/inter/${file}`);
+}
 
 const appIconBadgeConfig: AppIconBadgeConfig = {
   enabled: Env.EXPO_PUBLIC_APP_ENV !== 'production',

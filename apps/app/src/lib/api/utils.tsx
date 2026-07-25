@@ -26,6 +26,8 @@ export function normalizePages<T>(pages?: PaginateQuery<T>[]): T[] {
     : [];
 }
 
+const URL_PARAM_RE = /[?&]([^=#]+)=([^&#]*)/g;
+
 // a function that accept a url and return params as an object
 export function getUrlParameters(
   url: string | null,
@@ -33,10 +35,11 @@ export function getUrlParameters(
   if (url === null) {
     return null;
   }
-  const regex = /[?&]([^=#]+)=([^&#]*)/g;
+  // Module-scoped /g regex: reset lastIndex so a prior call's state can't skip matches.
+  URL_PARAM_RE.lastIndex = 0;
   const params = {};
   let match;
-  while ((match = regex.exec(url))) {
+  while ((match = URL_PARAM_RE.exec(url))) {
     if (match[1] !== null) {
       // @ts-expect-error - Dynamic key assignment
       params[match[1]] = match[2];
