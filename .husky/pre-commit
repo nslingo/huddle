@@ -1,0 +1,3 @@
+# Hooks run from the git root (the monorepo). The JS toolchain lives in apps/app, so delegate
+# there. Pre-commit is lint-staged only (fast, staged files); type-check runs on pre-push.
+cd apps/app && pnpm lint-staged

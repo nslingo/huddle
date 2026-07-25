@@ -1,0 +1,3 @@
+# Whole-program type-check before sharing. Can't be scoped to staged files (tsc is project-wide),
+# so it lives here rather than pre-commit. Tests are left to CI.
+cd apps/app && pnpm type-check

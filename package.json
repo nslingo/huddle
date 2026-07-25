@@ -5,6 +5,10 @@
   "scripts": {
     "app:android": "pnpm --filter @huddle/app android",
     "app:ios": "pnpm --filter @huddle/app ios",
-    "app:start": "pnpm --filter @huddle/app start"
+    "app:start": "pnpm --filter @huddle/app start",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
   }
 }
