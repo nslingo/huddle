@@ -4,15 +4,30 @@ import type { RenderOptions } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { NavigationContainer } from '@react-navigation/native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, userEvent } from '@testing-library/react-native';
 import * as React from 'react';
 import '@shopify/flash-list/jestSetup';
 
+/**
+ * A fresh client per render keeps cached data from leaking between tests, and `retry: false`
+ * makes error states resolve on the first rejection instead of retrying — the standard React
+ * Query testing recipe. Every data-backed screen needs the provider in the tree.
+ */
+function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+}
+
 function createAppWrapper() {
+  const queryClient = createTestQueryClient();
   return ({ children }: { children: React.ReactNode }) => (
-    <BottomSheetModalProvider>
-      <NavigationContainer>{children}</NavigationContainer>
-    </BottomSheetModalProvider>
+    <QueryClientProvider client={queryClient}>
+      <BottomSheetModalProvider>
+        <NavigationContainer>{children}</NavigationContainer>
+      </BottomSheetModalProvider>
+    </QueryClientProvider>
   );
 }
 
