@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -82,6 +83,27 @@ public class GlobalExceptionHandler {
             ResourceNotFoundException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                 ApiError.of(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI()));
+    }
+
+    /**
+     * Missing, malformed, expired or otherwise unverifiable credentials. Carries the
+     * {@code WWW-Authenticate: Bearer} challenge RFC 6750 §3 requires of a 401 from a bearer-token
+     * resource.
+     */
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ApiError> handleUnauthorized(
+            UnauthorizedException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .header(HttpHeaders.WWW_AUTHENTICATE, "Bearer")
+                .body(ApiError.of(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI()));
+    }
+
+    /** Authenticated but not permitted — e.g. a valid Google token from a non-Cornell account. */
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiError> handleForbidden(
+            ForbiddenException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                ApiError.of(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI()));
     }
 
     /** Unknown path / no matching handler. */

@@ -24,11 +24,21 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+/**
+ * Slice test for the club endpoints. Since slice 5 these require authentication, so the class runs
+ * as a mock authenticated user; {@link #listClubs_withoutAuthentication_returns401} is the one case
+ * that opts back out to pin the unauthenticated behaviour.
+ */
 @WebMvcTest(ClubController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, com.huddle.config.SecurityErrorResponder.class})
+@ActiveProfiles("test")
+@WithMockUser
 class ClubControllerWebMvcTest {
 
     @Autowired
@@ -148,6 +158,19 @@ class ClubControllerWebMvcTest {
                 // RFC 9110 §15.5.6: a 405 must advertise the permitted methods.
                 .andExpect(header().string("Allow", containsString("GET")))
                 .andExpect(jsonPath("$.status").value(405));
+
+        verifyNoInteractions(clubService);
+    }
+
+    @Test
+    @WithAnonymousUser
+    void listClubs_withoutAuthentication_returns401() throws Exception {
+        mockMvc.perform(get("/api/clubs"))
+                .andExpect(status().isUnauthorized())
+                // The filter chain rejects before the controller advice runs, so this asserts the
+                // SecurityErrorResponder still emits the standard ApiError shape.
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.path").value("/api/clubs"));
 
         verifyNoInteractions(clubService);
     }
