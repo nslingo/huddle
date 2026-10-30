@@ -27,6 +27,13 @@ Huddle turns that directory into a feed. Sign in with your Cornell Google accoun
 
 Huddle is mobile-first and Cornell-only: sign-in is restricted to `@cornell.edu` Google accounts, so the community stays students.
 
+## Repository note
+
+This public repository contains the API and the mobile client. Two parts of the system are deliberately kept out of it for now:
+
+- **Ingestion scraper**: the Python/Playwright job that builds the club catalog from CampusGroups is kept private. It runs against an authenticated Cornell session, and I'm not publishing scraping tooling for a university system while the project is pre-launch.
+- **Deployment configuration**: production infrastructure and release configuration will be published alongside the App Store and Google Play launch.
+
 ## Features
 
 - Interest-based onboarding: pick what you care about, get a feed built around it
@@ -256,6 +263,8 @@ Integration tests run against a real PostgreSQL container with the actual Flyway
 | `./mvnw verify` | `apps/api` | Full backend build and test |
 
 ## Deployment
+
+Deployment configuration is not yet public (see [Repository note](#repository-note)).
 
 **API**: packaged as a Docker image and deployed to Railway, alongside a managed PostgreSQL instance. Flyway migrations run on startup, so a deploy and a schema change are the same operation.
 
